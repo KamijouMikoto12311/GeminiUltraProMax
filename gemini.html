@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gemini - 元素周期表模型选择器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background-color: #ffffff;
+      color: #1f1f1f;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Central Ambient Sky-Blue Glow from Original Screenshot */
+    .gemini-ambient-glow {
+      background: radial-gradient(
+        circle at 50% 44%,
+        rgba(176, 213, 255, 0.52) 0%,
+        rgba(202, 226, 255, 0.34) 26%,
+        rgba(225, 239, 255, 0.14) 48%,
+        rgba(255, 255, 255, 0) 70%
+      );
+    }
+
+    /* Periodic Table 18-Column Grid */
+    .pt-grid {
+      display: grid;
+      grid-template-columns: repeat(18, minmax(0, 1fr));
+      gap: 3px;
+    }
+
+    /* Element Tile Styling */
+    .el-cell {
+      position: relative;
+      aspect-ratio: 1 / 1.06;
+      border-radius: 5px;
+      padding: 2px 3px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+    }
+
+    .el-cell:hover {
+      transform: scale(1.22);
+      z-index: 40;
+      box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.22);
+    }
+
+    .el-cell.selected-element {
+      outline: 2.5px solid #2563eb;
+      outline-offset: 1px;
+      z-index: 30;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2), 0 6px 16px rgba(37, 99, 235, 0.25);
+      transform: scale(1.08);
+    }
+
+    .el-cell.dimmed {
+      opacity: 0.22;
+      filter: grayscale(60%);
+    }
+
+    .el-cell.radioactive-element {
+      border-style: dashed;
+    }
+    .radioactive-indicator {
+      color: #92400e;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      line-height: 1;
+    }
+    .radioactive-legend {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      color: #92400e;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    /* Category Colors matching the vibrant Periodic Table aesthetic */
+    .cat-nonmetal { background-color: #bbf7d0; color: #14532d; border-color: #86efac; }
+    .cat-noble { background-color: #e9d5ff; color: #4c1d95; border-color: #c084fc; }
+    .cat-alkali { background-color: #fecdd3; color: #881337; border-color: #fda4af; }
+    .cat-alkaline { background-color: #fed7aa; color: #7c2d12; border-color: #fdba74; }
+    .cat-metalloid { background-color: #99f6e4; color: #134e4a; border-color: #5eead4; }
+    .cat-halogen { background-color: #fef08a; color: #713f12; border-color: #fde047; }
+    .cat-transition { background-color: #bae6fd; color: #0c4a6e; border-color: #7dd3fc; }
+    .cat-post-transition { background-color: #cbd5e1; color: #1e293b; border-color: #94a3b8; }
+    .cat-lanthanide { background-color: #fbcfe8; color: #831843; border-color: #f472b6; }
+    .cat-actinide { background-color: #f5d0fe; color: #701a75; border-color: #e879f9; }
+
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.12);
+      border-radius: 9999px;
+    }
+
+    /* Pulse indicator for active model */
+    @keyframes subtlePulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.06); opacity: 0.85; }
+    }
+    .badge-pulse {
+      animation: subtlePulse 2.4s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex overflow-hidden bg-white select-none">
+
+  <!-- ================= LEFT SIDEBAR (Exact Replica of Screenshot) ================= -->
+  <aside id="sidebar" class="w-[238px] h-full bg-[#f8fafd] border-r border-[#eef1f6] flex flex-col justify-between shrink-0 px-3 py-3 text-[13px] text-[#444746] z-20 transition-all duration-200">
+    <!-- Top Section -->
+    <div>
+      <!-- Top Brand & Icons Row -->
+      <div class="flex items-center justify-between px-2 py-1.5 mb-2">
+        <div class="flex items-center gap-2 cursor-pointer">
+          <!-- Gemini Sparkle SVG -->
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C12.3 7.2 16.8 11.7 22 12C16.8 12.3 12.3 16.8 12 22C11.7 16.8 7.2 12.3 2 12C7.2 11.7 11.7 7.2 12 2Z" fill="url(#geminiGrad)"/>
+            <defs>
+              <linearGradient id="geminiGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#4285F4"/>
+                <stop offset="50%" stop-color="#9B72CB"/>
+                <stop offset="100%" stop-color="#D96570"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="font-semibold text-[15px] text-[#1f1f1f] tracking-tight">Gemini</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-[#5f6368]">
+          <button class="p-1.5 rounded-lg hover:bg-gray-200/60 transition" title="搜索">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path stroke-linecap="round" d="M20 20l-3.5-3.5"></path>
+            </svg>
+          </button>
+          <button class="p-1.5 rounded-lg hover:bg-gray-200/60 transition" title="收起侧边栏">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+              <line x1="9" y1="4" x2="9" y2="20"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- New Chat Active Pill -->
+      <button class="w-full flex items-center gap-2.5 px-3 py-2 rounded-full bg-[#e8eef7] text-[#1f1f1f] font-medium text-[13px] mb-2 hover:bg-[#dde6f4] transition">
+        <svg class="w-4 h-4 text-[#1f1f1f]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+        <span>发起新对话</span>
+      </button>
+
+      <!-- Primary Nav Links -->
+      <nav class="space-y-0.5 mb-4">
+        <a href="javascript:void(0)" class="flex items-center gap-3 px-3 py-1.5 rounded-lg hover:bg-gray-200/50 text-[#444746]">
+          <svg class="w-4 h-4 text-[#5f6368]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 3h12l4 6-10 12L2 9l4-6z"/>
+          </svg>
+          <span>钻石</span>
+        </a>
+        <a href="javascript:void(0)" class="flex items-center gap-3 px-3 py-1.5 rounded-lg hover:bg-gray-200/50 text-[#444746]">
+          <svg class="w-4 h-4 text-[#5f6368]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <circle cx="6" cy="12" r="1.5"></circle>
+            <circle cx="12" cy="12" r="1.5"></circle>
+            <circle cx="18" cy="12" r="1.5"></circle>
+          </svg>
+          <span>空间</span>
+        </a>
+      </nav>
+
+      <!-- Private Section -->
+      <div class="mb-4">
+        <div class="px-3 py-1 text-[11px] font-medium text-[#747775]">私人小助手</div>
+        <button class="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-gray-200/50 text-[#444746]">
+          <span class="text-base leading-none text-[#5f6368]">+</span>
+          <span>创建小助手</span>
+        </button>
+      </div>
+
+      <!-- Chats History Section -->
+      <div>
+        <div class="flex items-center justify-between px-3 py-1 text-[11px] font-medium text-[#747775]">
+          <span>对话</span>
+          <svg class="w-3.5 h-3.5 text-[#747775] cursor-pointer hover:text-gray-900" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+          </svg>
+        </div>
+        <ul class="space-y-0.5 mt-0.5 text-[12.5px] text-[#444746]">
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">NiKo 科隆 Major 夺冠</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">创智涨停原因与走势分析</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">早餐营养价值与科学分析</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">修改该段文字内容</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">总结归纳该篇学术论文</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">Qwen 4-Max 发布时间预测</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">帕金森病研究进展与机制分析</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">Adler 的交友观解析</li>
+          <li class="px-3 py-1.5 rounded-lg hover:bg-gray-200/50 truncate cursor-pointer">Antigravity与Claude及GPT使用体验对比</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bottom User Profile -->
+    <div class="flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-gray-200/50 cursor-pointer">
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded-full bg-[#00897b] text-white flex items-center justify-center font-semibold text-xs">
+          I
+        </div>
+        <div class="leading-tight">
+          <div class="text-[12.5px] font-medium text-[#1f1f1f]">Ian</div>
+          <div class="text-[10.5px] text-[#747775]">Pro</div>
+        </div>
+      </div>
+      <svg class="w-4 h-4 text-[#5f6368]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN WORKSPACE AREA ================= -->
+  <main class="flex-1 h-full relative flex flex-col items-center gemini-ambient-glow overflow-hidden">
+
+    <!-- Top Right Utility Bar (Matches Screenshot Strictly) -->
+    <header class="w-full flex items-center justify-end gap-2.5 px-6 py-3.5 z-20">
+      <!-- Download App Pill -->
+      <button class="flex items-center gap-1.5 bg-[#f0f4f9] hover:bg-[#e4eaf2] text-[#1f1f1f] text-[12px] font-medium px-3 py-1.5 rounded-full transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+        </svg>
+        <span>下载应用</span>
+      </button>
+
+      <!-- Top Right User Mini Icon -->
+      <div class="w-7 h-7 rounded-full bg-gray-200 overflow-hidden border border-gray-300 flex items-center justify-center text-[11px] font-semibold text-gray-700 cursor-pointer">
+        <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      </div>
+    </header>
+
+    <!-- Right-edge pink floating widget from screenshot -->
+    <div class="absolute right-3 top-[185px] w-7 h-7 rounded-full bg-[#fce8e6] text-[#d93025] flex items-center justify-center shadow-sm cursor-pointer hover:scale-105 transition z-10">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      </svg>
+    </div>
+
+    <!-- ================= CENTER PROMPT & MODEL SELECTOR CONTAINER ================= -->
+    <div class="w-full max-w-[1140px] flex flex-col items-center px-4 mt-1 z-20">
+
+      <!-- Heading -->
+      <h1 class="text-[26px] font-medium text-[#1f1f1f] tracking-tight mb-4">
+        需要我为你做些什么？
+      </h1>
+
+      <!-- Prompt Input Bar (Exact Pill from Screenshot) -->
+      <div class="w-[460px] max-w-full bg-white rounded-full px-4 py-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100 flex items-center justify-between gap-2 relative z-30">
+        <div class="flex items-center gap-2.5 flex-1">
+          <button class="text-[#5f6368] hover:text-gray-900 p-0.5 rounded-full transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
+          <input
+            type="text"
+            placeholder="问问 Gemini"
+            class="w-full text-[13.5px] text-[#1f1f1f] placeholder-[#747775] bg-transparent focus:outline-none"
+          />
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <!-- Model Selector Trigger Pill (Opens/Closes Periodic Table) -->
+          <button
+            id="modelTriggerBtn"
+            onclick="togglePeriodicModal()"
+            class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[12.5px] font-medium bg-[#e8f0fe] text-[#1967d2] border border-[#bfd6fb] hover:bg-[#d2e3fc] transition cursor-pointer"
+          >
+            <span id="triggerModelName">Argon</span>
+            <svg id="triggerChevron" class="w-3.5 h-3.5 transition-transform duration-200 rotate-180" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+
+          <!-- Mic Button -->
+          <button class="p-1.5 text-[#5f6368] hover:text-gray-900 rounded-full hover:bg-gray-100 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Background Chat/Task Tabs (Visible when modal is closed, or subtly tucked) -->
+      <div id="underPromptSuggestions" class="hidden flex-col items-center mt-4">
+        <div class="flex items-center gap-1 bg-white/80 backdrop-blur px-1.5 py-1 rounded-full shadow-sm border border-gray-100 text-[12px] mb-5">
+          <span class="px-3 py-0.5 rounded-full bg-gray-100 font-medium text-gray-800">对话</span>
+          <span class="px-3 py-0.5 rounded-full text-gray-500 hover:text-gray-800 cursor-pointer">任务</span>
+        </div>
+        <div class="space-y-2.5 text-[12.5px] text-[#444746]">
+          <div class="flex items-center gap-2.5 cursor-pointer hover:text-black">
+            <span class="w-3.5 h-3.5 rounded-full border border-gray-400 inline-block"></span>
+            <span>将该段文字翻译成英文</span>
+          </div>
+          <div class="flex items-center gap-2.5 cursor-pointer hover:text-black">
+            <span class="text-xs">⌘</span>
+            <span>策划日本游</span>
+          </div>
+          <div class="flex items-center gap-2.5 cursor-pointer hover:text-black">
+            <span class="text-xs">¤</span>
+            <span>约瑟夫森结物理机制解读</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= PERIODIC TABLE MODEL SELECTOR POPOVER ================= -->
+      <div
+        id="periodicModal"
+        class="w-full max-w-[1040px] mt-2.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.16)] border border-gray-200/90 px-5 py-3.5 transition-all duration-200 relative z-30"
+      >
+        <!-- Top Popover Caret pointing to Model Selector button -->
+        <div class=" -top-2 left-[56.5%] w-4 h-4 bg-white border-l border-t border-gray-200 rotate-45 absolute"></div>
+
+        <!-- Modal Header -->
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5 pb-2 border-b border-gray-100">
+          <div class="flex items-center gap-2.5">
+            <span class="text-[15px] font-bold text-[#1f1f1f] tracking-tight">
+              选择 AI 模型 / Choose AI Model
+            </span>
+          </div>
+
+          <!-- Category Legend & Filter Controls -->
+          <div id="filterControls" class="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <button onclick="filterCategory('all')" data-cat="all" class="cat-btn px-2 py-0.5 rounded-md bg-gray-900 text-white font-medium transition">全部 (118)</button>
+            <button onclick="filterCategory('noble')" data-cat="noble" class="cat-btn px-2 py-0.5 rounded-md bg-[#e9d5ff] text-[#4c1d95] hover:opacity-85 transition font-medium">稀有气体旗舰系 (He/Ne/Ar/Xe)</button>
+            <button onclick="filterCategory('alkali')" data-cat="alkali" class="cat-btn px-2 py-0.5 rounded-md bg-[#fecdd3] text-[#881337] hover:opacity-85 transition">碱金属极速系</button>
+            <button onclick="filterCategory('transition')" data-cat="transition" class="cat-btn px-2 py-0.5 rounded-md bg-[#bae6fd] text-[#0c4a6e] hover:opacity-85 transition">过渡金属深度推理</button>
+            <button onclick="filterCategory('nonmetal')" data-cat="nonmetal" class="cat-btn px-2 py-0.5 rounded-md bg-[#bbf7d0] text-[#14532d] hover:opacity-85 transition">非金属基础系</button>
+            <button onclick="filterCategory('halogen')" data-cat="halogen" class="cat-btn px-2 py-0.5 rounded-md bg-[#fef08a] text-[#713f12] hover:opacity-85 transition">卤素多模态系</button>
+            <input
+              id="elementSearch"
+              oninput="searchElements(this.value)"
+              type="text"
+              placeholder="搜索元素 / 模型 (如 Ar, 氩, Carbon)..."
+              class="ml-1 px-2.5 py-0.5 text-[11px] rounded-md border border-gray-200 focus:outline-none focus:border-blue-500 w-44 bg-gray-50"
+            />
+          </div>
+        </div>
+
+        <!-- MAIN 18-COLUMN PERIODIC TABLE GRID (Periods 1 to 7) -->
+        <div id="mainPeriodicGrid" class="pt-grid relative"></div>
+
+        <!-- LANTHANIDES & ACTINIDES (57-71 & 89-103) -->
+        <div id="fBlockGrid" class="pt-grid mt-2 pt-1.5 border-t border-dashed border-gray-200"></div>
+        <div class="radioactive-legend">
+          <span aria-hidden="true">☢</span>
+          <span>放射性元素：如同看到核弹爆炸一般瘫坐</span>
+        </div>
+
+        <!-- Bottom Model Telemetry & Active Selection Footer -->
+        <div class="mt-2.5 pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-gray-600">
+          <div class="flex items-center gap-2.5">
+            <span class="text-gray-500">点击元素切换不同的 AI 基础模型</span>
+            <span class="text-gray-300">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block w-2 h-2 rounded-full bg-blue-600 badge-pulse"></span>
+              <strong id="footerModelTitle" class="text-gray-900 font-semibold">18 Ar · 氩 (Argon-v2)</strong>
+              <span id="footerModelSpecs" class="text-blue-700 font-medium hidden sm:inline">· 惰性气体零幻觉稳定态旗舰推理模型 · 2M 上下文</span>
+            </div>
+          </div>
+          <div class="text-[11px] text-gray-500 font-medium">
+            按化学元素探索模型版本
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // Complete 118 Elements Data (Atomic Number, Symbol, Chinese Name, English Model Name, Category, Grid Row, Grid Col, AI Specialty)
+    const ELEMENTS = [
+      // Period 1
+      { z: 1, sym: "H", zh: "氢", en: "Hydrogen", cat: "nonmetal", r: 1, c: 1, spec: "超轻量极速响应模型 · 首字延迟 8ms" },
+      { z: 2, sym: "He", zh: "氦", en: "Helium", cat: "noble", r: 1, c: 18, spec: "惰性气体超稳态轻量旗舰 · 移动端与边缘计算首选" },
+
+      // Period 2
+      { z: 3, sym: "Li", zh: "锂", en: "Lithium", cat: "alkali", r: 2, c: 1, spec: "高能密度长续航对话模型 · 适合全天候高频问答" },
+      { z: 4, sym: "Be", zh: "铍", en: "Beryllium", cat: "alkaline", r: 2, c: 2, spec: "高刚性结构化输出模型 · JSON/Schema 100% 严丝合缝" },
+      { z: 5, sym: "B", zh: "硼", en: "Boron", cat: "metalloid", r: 2, c: 13, spec: "半导体逻辑门控模型 · 擅长工作流路由与条件判断" },
+      { z: 6, sym: "C", zh: "碳", en: "Carbon", cat: "nonmetal", r: 2, c: 14, spec: "有机生命基石通用大模型 · 创意写作与自然语言大师" },
+      { z: 7, sym: "N", zh: "氮", en: "Nitrogen", cat: "nonmetal", r: 2, c: 15, spec: "全天候知识检索增强 (RAG) 基础模型" },
+      { z: 8, sym: "O", zh: "氧", en: "Oxygen", cat: "nonmetal", r: 2, c: 16, spec: "高活性思维链 (CoT) 助燃模型 · 激发多维头脑风暴" },
+      { z: 9, sym: "F", zh: "氟", en: "Fluorine", cat: "halogen", r: 2, c: 17, spec: "强电负性代码重构与 Bug 腐蚀清理专家" },
+      { z: 10, sym: "Ne", zh: "氖", en: "Neon", cat: "noble", r: 2, c: 18, spec: "高视觉表现力 UI/UX 与前端生成旗舰模型" },
+
+      // Period 3
+      { z: 11, sym: "Na", zh: "钠", en: "Sodium", cat: "alkali", r: 3, c: 1, spec: "高活跃度实时流式语音对话模型" },
+      { z: 12, sym: "Mg", zh: "镁", en: "Magnesium", cat: "alkaline", r: 3, c: 2, spec: "闪光级图像识别与 OCR 视觉提取模型" },
+      { z: 13, sym: "Al", zh: "铝", en: "Aluminum", cat: "post-transition", r: 3, c: 13, spec: "工业级高性价比批处理与文档摘要模型" },
+      { z: 14, sym: "Si", zh: "硅", en: "Silicon", cat: "metalloid", r: 3, c: 14, spec: "芯片级底层系统编程 · C++/Rust/Verilog 专精" },
+      { z: 15, sym: "P", zh: "磷", en: "Phosphorus", cat: "nonmetal", r: 3, c: 15, spec: "深度启发式搜索与科研文献脉络分析模型" },
+      { z: 16, sym: "S", zh: "硫", en: "Sulfur", cat: "nonmetal", r: 3, c: 16, spec: "复杂数据清洗与多源异构表格融合模型" },
+      { z: 17, sym: "Cl", zh: "氯", en: "Chlorine", cat: "halogen", r: 3, c: 17, spec: "安全合规审计与有害信息净化多模态模型" },
+      { z: 18, sym: "Ar", zh: "氩", en: "Argon", cat: "noble", r: 3, c: 18, spec: "惰性气体零幻觉稳定态旗舰推理模型 · 2M 上下文" },
+
+      // Period 4
+      { z: 19, sym: "K", zh: "钾", en: "Potassium", cat: "alkali", r: 4, c: 1, spec: "神经电位级脉冲响应模型 · 极速 Agent 工具调用" },
+      { z: 20, sym: "Ca", zh: "钙", en: "Calcium", cat: "alkaline", r: 4, c: 2, spec: "系统架构骨架设计模型 · 适合大型工程蓝图规划" },
+      { z: 21, sym: "Sc", zh: "钪", en: "Scandium", cat: "transition", r: 4, c: 3, spec: "精密航空级数学定理证明辅助模型" },
+      { z: 22, sym: "Ti", zh: "钛", en: "Titanium", cat: "transition", r: 4, c: 4, spec: "高强度长程多步推理模型 · 抗逻辑退化" },
+      { z: 23, sym: "V", zh: "钒", en: "Vanadium", cat: "transition", r: 4, c: 5, spec: "弹性内存记忆网络 · 跨会话长期记忆模型" },
+      { z: 24, sym: "Cr", zh: "铬", en: "Chromium", cat: "transition", r: 4, c: 6, spec: "浏览器自动化与 Web Agent 操控专精模型" },
+      { z: 25, sym: "Mn", zh: "锰", en: "Manganese", cat: "transition", r: 4, c: 7, spec: "高鲁棒性工业故障诊断与日志分析模型" },
+      { z: 26, sym: "Fe", zh: "铁", en: "Iron", cat: "transition", r: 4, c: 8, spec: "主力工程基座大模型 · 全栈开发与后端架构稳健之选" },
+      { z: 27, sym: "Co", zh: "钴", en: "Cobalt", cat: "transition", r: 4, c: 9, spec: "磁性上下文吸附模型 · 超长文档针尖检索 99.9%" },
+      { z: 28, sym: "Ni", zh: "镍", en: "Nickel", cat: "transition", r: 4, c: 10, spec: "金融量化分析与高频时间序列预测模型" },
+      { z: 29, sym: "Cu", zh: "铜", en: "Copper", cat: "transition", r: 4, c: 11, spec: "高导电率多 Agent 协同通信总线模型" },
+      { z: 30, sym: "Zn", zh: "锌", en: "Zinc", cat: "transition", r: 4, c: 12, spec: "代码防腐与自动化单元测试生成模型" },
+      { z: 31, sym: "Ga", zh: "镓", en: "Gallium", cat: "post-transition", r: 4, c: 13, spec: "液态自适应动态权重微调模型" },
+      { z: 32, sym: "Ge", zh: "锗", en: "Germanium", cat: "metalloid", r: 4, c: 14, spec: "Gemini 经典同源架构 · 多模态图文音全能基座" },
+      { z: 33, sym: "As", zh: "砷", en: "Arsenic", cat: "metalloid", r: 4, c: 15, spec: "红队测试与网络安全渗透漏洞挖掘专精模型" },
+      { z: 34, sym: "Se", zh: "硒", en: "Selenium", cat: "nonmetal", r: 4, c: 16, spec: "自动化端到端 UI 测试与视觉回归巡检模型" },
+      { z: 35, sym: "Br", zh: "溴", en: "Bromine", cat: "halogen", r: 4, c: 17, spec: "高密度长视频理解与逐帧语义提取模型" },
+      { z: 36, sym: "Kr", zh: "氪", en: "Krypton", cat: "noble", r: 4, c: 18, spec: "超人级复杂奥数与物理竞赛深度思考旗舰" },
+
+      // Period 5
+      { z: 37, sym: "Rb", zh: "铷", en: "Rubidium", cat: "alkali", r: 5, c: 1, spec: "原子钟级精准时序规划与日程编排模型" },
+      { z: 38, sym: "Sr", zh: "锶", en: "Strontium", cat: "alkaline", r: 5, c: 2, spec: "绚丽数据可视化与 D3/Three.js 图形生成模型" },
+      { z: 39, sym: "Y", zh: "钇", en: "Yttrium", cat: "transition", r: 5, c: 3, spec: "激光级聚焦学术论文精读与引文核查模型" },
+      { z: 40, sym: "Zr", zh: "锆", en: "Zirconium", cat: "transition", r: 5, c: 4, spec: "核反应堆级高可靠形式化验证模型" },
+      { z: 41, sym: "Nb", zh: "铌", en: "Niobium", cat: "transition", r: 5, c: 5, spec: "超导零损耗跨语言同声传译模型 (支持 140+ 语种)" },
+      { z: 42, sym: "Mo", zh: "钼", en: "Molybdenum", cat: "transition", r: 5, c: 6, spec: "高熔点极限压力测试与高并发架构设计模型" },
+      { z: 43, sym: "Tc", zh: "锝", en: "Technetium", cat: "transition", r: 5, c: 7, spec: "全人工合成纯推理实验模型 · 零自然语料偏见" },
+      { z: 44, sym: "Ru", zh: "钌", en: "Ruthenium", cat: "transition", r: 5, c: 8, spec: "催化级代码性能优化与算法复杂度降维模型" },
+      { z: 45, sym: "Rh", zh: "铑", en: "Rhodium", cat: "transition", r: 5, c: 9, spec: "高贵金属级商业战略咨询与财报深度研判模型" },
+      { z: 46, sym: "Pd", zh: "钯", en: "Palladium", cat: "transition", r: 5, c: 10, spec: "高吞吐信息过滤与百万级语料蒸馏模型" },
+      { z: 47, sym: "Ag", zh: "银", en: "Silver", cat: "transition", r: 5, c: 11, spec: "镜面级逻辑反思 (Self-Reflection) 与纠错模型" },
+      { z: 48, sym: "Cd", zh: "镉", en: "Cadmium", cat: "transition", r: 5, c: 12, spec: "中子吸收级幻觉抑制与事实核查模型" },
+      { z: 49, sym: "In", zh: "铟", en: "Indium", cat: "post-transition", r: 5, c: 13, spec: "触控屏交互设计与移动端原型生成模型" },
+      { z: 50, sym: "Sn", zh: "锡", en: "Tin", cat: "post-transition", r: 5, c: 14, spec: "模块化微服务焊接与 API 胶水集成模型" },
+      { z: 51, sym: "Sb", zh: "锑", en: "Antimony", cat: "metalloid", r: 5, c: 15, spec: "逆向思维与反事实推理辩论模型" },
+      { z: 52, sym: "Te", zh: "碲", en: "Tellurium", cat: "metalloid", r: 5, c: 16, spec: "地球科学与地理信息系统 (GIS) 空间分析模型" },
+      { z: 53, sym: "I", zh: "碘", en: "Iodine", cat: "halogen", r: 5, c: 17, spec: "医学影像辅助解读与生物文献综述专精模型" },
+      { z: 54, sym: "Xe", zh: "氙", en: "Xenon", cat: "noble", r: 5, c: 18, spec: "深空离子推进级超长思维链 (Deep Think) 旗舰模型" },
+
+      // Period 6 (Main Grid + Lanthanide Placeholder)
+      { z: 55, sym: "Cs", zh: "铯", en: "Cesium", cat: "alkali", r: 6, c: 1, spec: "国际标准时间基准级高精度量化交易模型" },
+      { z: 56, sym: "Ba", zh: "钡", en: "Barium", cat: "alkaline", r: 6, c: 2, spec: "深度神经网络可解释性造影透视模型" },
+      { z: 72, sym: "Hf", zh: "铪", en: "Hafnium", cat: "transition", r: 6, c: 4, spec: "高介电常数超大参数矩阵密集推理模型" },
+      { z: 73, sym: "Ta", zh: "钽", en: "Tantalum", cat: "transition", r: 6, c: 5, spec: "超高容抗百万轮长对话状态保持模型" },
+      { z: 74, sym: "W", zh: "钨", en: "Tungsten", cat: "transition", r: 6, c: 6, spec: "最高熔点硬核数理方程求解与符号计算模型" },
+      { z: 75, sym: "Re", zh: "铼", en: "Rhenium", cat: "transition", r: 6, c: 7, spec: "航空涡轮级强化学习策略优化模型" },
+      { z: 76, sym: "Os", zh: "锇", en: "Osmium", cat: "transition", r: 6, c: 8, spec: "最高密度知识压缩大模型 · 单卡可跑满血能力" },
+      { z: 77, sym: "Ir", zh: "铱", en: "Iridium", cat: "transition", r: 6, c: 9, spec: "星际抗辐射级鲁棒推理 · 极端边缘场景零崩溃" },
+      { z: 78, sym: "Pt", zh: "铂", en: "Platinum", cat: "transition", r: 6, c: 10, spec: "白金级企业定制全模态尊享旗舰模型" },
+      { z: 79, sym: "Au", zh: "金", en: "Gold", cat: "transition", r: 6, c: 11, spec: "黄金标准评测基准零失误宗师级大模型" },
+      { z: 80, sym: "Hg", zh: "汞", en: "Mercury", cat: "transition", r: 6, c: 12, spec: "液态金属流式多模态实时音视频交互模型" },
+      { z: 81, sym: "Tl", zh: "铊", en: "Thallium", cat: "post-transition", r: 6, c: 13, spec: "红外弱光视觉理解与遥感图像分析模型" },
+      { z: 82, sym: "Pb", zh: "铅", en: "Lead", cat: "post-transition", r: 6, c: 14, spec: "隐私数据强隔离沙箱与联邦学习安全模型" },
+      { z: 83, sym: "Bi", zh: "铋", en: "Bismuth", cat: "post-transition", r: 6, c: 15, spec: "晶体阶梯式分步教学与苏格拉底启发式导师模型" },
+      { z: 84, sym: "Po", zh: "钋", en: "Polonium", cat: "post-transition", r: 6, c: 16, spec: "高能粒子级复杂科学计算加速模型" },
+      { z: 85, sym: "At", zh: "砹", en: "Astatine", cat: "halogen", r: 6, c: 17, spec: "稀有语种与古文字破译专精多模态模型" },
+      { z: 86, sym: "Rn", zh: "氡", en: "Radon", cat: "noble", r: 6, c: 18, spec: "穿透式深层代码库全局重构旗舰模型" },
+
+      // Period 7 (Main Grid + Actinide Placeholder)
+      { z: 87, sym: "Fr", zh: "钫", en: "Francium", cat: "alkali", r: 7, c: 1, spec: "瞬态爆发式百万并发弹性推理模型" },
+      { z: 88, sym: "Ra", zh: "镭", en: "Radium", cat: "alkaline", r: 7, c: 2, spec: "自发光灵感涌现与艺术创作先驱模型" },
+      { z: 104, sym: "Rf", zh: "𬬻", en: "Rutherfordium", cat: "transition", r: 7, c: 4, spec: "原子核散射级多路径蒙特卡洛树搜索模型" },
+      { z: 105, sym: "Db", zh: "𬭊", en: "Dubnium", cat: "transition", r: 7, c: 5, spec: "超重型企业级知识图谱自动构建模型" },
+      { z: 106, sym: "Sg", zh: "𬭳", en: "Seaborgium", cat: "transition", r: 7, c: 6, spec: "跨学科分子动力学与材料发现预测模型" },
+      { z: 107, sym: "Bh", zh: "𬭛", en: "Bohrium", cat: "transition", r: 7, c: 7, spec: "量子轨道级概率推理与不确定性建模模型" },
+      { z: 108, sym: "Hs", zh: "𬭶", en: "Hassium", cat: "transition", r: 7, c: 8, spec: "高维张量并行分布式集群调度模型" },
+      { z: 109, sym: "Mt", zh: "鿏", en: "Meitnerium", cat: "transition", r: 7, c: 9, spec: "核裂变级复杂任务拆解与子代理派发模型" },
+      { z: 110, sym: "Ds", zh: "𫟼", en: "Darmstadtium", cat: "transition", r: 7, c: 10, spec: "精密德国工业4.0数字孪生仿真模型" },
+      { z: 111, sym: "Rg", zh: "𬬭", en: "Roentgenium", cat: "transition", r: 7, c: 11, spec: "X射线级黑盒代码逆向工程与架构透视模型" },
+      { z: 112, sym: "Cn", zh: "鿔", en: "Copernicium", cat: "transition", r: 7, c: 12, spec: "日心说级全局视角宏观经济预测模型" },
+      { z: 113, sym: "Nh", zh: "鿭", en: "Nihonium", cat: "post-transition", r: 7, c: 13, spec: "二次元动漫分镜生成与日式本土化专精模型" },
+      { z: 114, sym: "Fl", zh: "𫓧", en: "Flerovium", cat: "post-transition", r: 7, c: 14, spec: "超重稳定岛探索级前沿 AGI 原型实验模型" },
+      { z: 115, sym: "Mc", zh: "镆", en: "Moscovium", cat: "post-transition", r: 7, c: 15, spec: "极寒环境高算力密度数学物理推导模型" },
+      { z: 116, sym: "Lv", zh: "𫟷", en: "Livermorium", cat: "post-transition", r: 7, c: 16, spec: "国家实验室级超算流体力学仿真模型" },
+      { z: 117, sym: "Ts", zh: "鿬", en: "Tennessine", cat: "halogen", r: 7, c: 17, spec: "超重卤素全感官沉浸式多模态生成模型" },
+      { z: 118, sym: "Og", zh: "鿫", en: "Oganesson", cat: "noble", r: 7, c: 18, spec: "第118号终极稀有气体 · 满配万亿参数 AGI 预览版" },
+
+      // Lanthanides (57 - 71) -> Rendered in f-block row 1 (cols 3 to 17)
+      { z: 57, sym: "La", zh: "镧", en: "Lanthanum", cat: "lanthanide", fRow: 1, fCol: 3, spec: "稀土光学级高保真图像超分与修复模型" },
+      { z: 58, sym: "Ce", zh: "铈", en: "Cerium", cat: "lanthanide", fRow: 1, fCol: 4, spec: "精密抛光级文章润色与学术英语母语化模型" },
+      { z: 59, sym: "Pr", zh: "镨", en: "Praseodymium", cat: "lanthanide", fRow: 1, fCol: 5, spec: "强磁级多模态特征对齐与跨模态检索模型" },
+      { z: 60, sym: "Nd", zh: "钕", en: "Neodymium", cat: "lanthanide", fRow: 1, fCol: 6, spec: "地表最强永磁注意力机制 · 10M 上下文永不遗忘" },
+      { z: 61, sym: "Pm", zh: "钷", en: "Promethium", cat: "lanthanide", fRow: 1, fCol: 7, spec: "普罗米修斯火种级自主科研假设生成模型" },
+      { z: 62, sym: "Sm", zh: "钐", en: "Samarium", cat: "lanthanide", fRow: 1, fCol: 8, spec: "抗高温消磁高稳定性企业客服 Agent 模型" },
+      { z: 63, sym: "Eu", zh: "铕", en: "Europium", cat: "lanthanide", fRow: 1, fCol: 9, spec: "三基色荧光级高审美平面设计与排版模型" },
+      { z: 64, sym: "Gd", zh: "钆", en: "Gadolinium", cat: "lanthanide", fRow: 1, fCol: 10, spec: "磁共振级特征提取与高维数据聚类分析模型" },
+      { z: 65, sym: "Tb", zh: "铽", en: "Terbium", cat: "lanthanide", fRow: 1, fCol: 11, spec: "磁致伸缩级高保真音乐作曲与声效合成模型" },
+      { z: 66, sym: "Dy", zh: "镝", en: "Dysprosium", cat: "lanthanide", fRow: 1, fCol: 12, spec: "高磁通量密集型矩阵运算与科学绘图模型" },
+      { z: 67, sym: "Ho", zh: "钬", en: "Holmium", cat: "lanthanide", fRow: 1, fCol: 13, spec: "激光手术刀级精准代码 Patch 修复模型" },
+      { z: 68, sym: "Er", zh: "铒", en: "Erbium", cat: "lanthanide", fRow: 1, fCol: 14, spec: "光纤放大器级长距离跨文档知识串联模型" },
+      { z: 69, sym: "Tm", zh: "铥", en: "Thulium", cat: "lanthanide", fRow: 1, fCol: 15, spec: "便携式边缘端离线全功能推理模型" },
+      { z: 70, sym: "Yb", zh: "镱", en: "Ytterbium", cat: "lanthanide", fRow: 1, fCol: 16, spec: "超冷原子光晶格量子计算模拟专精模型" },
+      { z: 71, sym: "Lu", zh: "镥", en: "Lutetium", cat: "lanthanide", fRow: 1, fCol: 17, spec: "镧系终章高密度跨领域综述与元分析模型" },
+
+      // Actinides (89 - 103) -> Rendered in f-block row 2 (cols 3 to 17)
+      { z: 89, sym: "Ac", zh: "锕", en: "Actinium", cat: "actinide", fRow: 2, fCol: 3, spec: "高能射线级深度探索与未知问题攻坚模型" },
+      { z: 90, sym: "Th", zh: "钍", en: "Thorium", cat: "actinide", fRow: 2, fCol: 4, spec: "熔盐堆级超长续航自主演进 Agent 模型" },
+      { z: 91, sym: "Pa", zh: "镤", en: "Protactinium", cat: "actinide", fRow: 2, fCol: 5, spec: "先驱者级古老代码库现代化迁移重构模型" },
+      { z: 92, sym: "U", zh: "铀", en: "Uranium", cat: "actinide", fRow: 2, fCol: 6, spec: "重核裂变级超大规模算力集群旗舰推理模型" },
+      { z: 93, sym: "Np", zh: "镎", en: "Neptunium", cat: "actinide", fRow: 2, fCol: 7, spec: "深海与气象流体大模型预测系统" },
+      { z: 94, sym: "Pu", zh: "钚", en: "Plutonium", cat: "actinide", fRow: 2, fCol: 8, spec: "深空探测器同位素电池级无人值守自治模型" },
+      { z: 95, sym: "Am", zh: "镅", en: "Americium", cat: "actinide", fRow: 2, fCol: 9, spec: "烟雾敏锐感知级实时舆情与风险预警模型" },
+      { z: 96, sym: "Cm", zh: "锔", en: "Curium", cat: "actinide", fRow: 2, fCol: 10, spec: "居里夫人致敬版 · 生物医药与蛋白质折叠专精模型" },
+      { z: 97, sym: "Bk", zh: "锫", en: "Berkelium", cat: "actinide", fRow: 2, fCol: 11, spec: "伯克利开源生态兼容与工具链编排模型" },
+      { z: 98, sym: "Cf", zh: "锎", en: "Californium", cat: "actinide", fRow: 2, fCol: 12, spec: "强中子源级高维特征穿透分析与异常检测模型" },
+      { z: 99, sym: "Es", zh: "锿", en: "Einsteinium", cat: "actinide", fRow: 2, fCol: 13, spec: "爱因斯坦相对论级理论物理与时空几何推导模型" },
+      { z: 100, sym: "Fm", zh: "镄", en: "Fermium", cat: "actinide", fRow: 2, fCol: 14, spec: "费米估算与商业案例快速量级推演模型" },
+      { z: 101, sym: "Md", zh: "钔", en: "Mendelevium", cat: "actinide", fRow: 2, fCol: 15, spec: "门捷列夫周期律发现者 · 科学规律归纳与预测宗师" },
+      { z: 102, sym: "No", zh: "锘", en: "Nobelium", cat: "actinide", fRow: 2, fCol: 16, spec: "诺贝尔奖级前沿文献创新点挖掘与审稿模型" },
+      { z: 103, sym: "Lr", zh: "铹", en: "Lawrencium", cat: "actinide", fRow: 2, fCol: 17, spec: "回旋加速器级迭代自博弈强化学习终极模型" }
+    ];
+
+    // Elements with no stable isotopes: Tc, Pm, and Bi through Og.
+    const RADIOACTIVE_LABEL = '如同看到核弹爆炸一般瘫坐';
+    function isRadioactiveElement(el) {
+      return el.z === 43 || el.z === 61 || el.z >= 83;
+    }
+    function getElementSpec(el) {
+      return isRadioactiveElement(el) ? RADIOACTIVE_LABEL : el.spec;
+    }
+
+    const CATEGORY_LABELS = {
+      "nonmetal": "非金属基础系",
+      "noble": "稀有气体旗舰系",
+      "alkali": "碱金属极速系",
+      "alkaline": "碱土金属结构系",
+      "metalloid": "类金属系统系",
+      "halogen": "卤素多模态系",
+      "transition": "过渡金属深度推理",
+      "post-transition": "后过渡工业系",
+      "lanthanide": "镧系稀土实验系",
+      "actinide": "锕系超重算力系"
+    };
+
+    let selectedZ = 18; // Default: 18 Ar (Argon) as shown in the user's screenshot
+    let currentFilter = 'all';
+    let showCenterArchitectureCard = true;
+
+    function renderPeriodicTable() {
+      const mainGrid = document.getElementById('mainPeriodicGrid');
+      const fGrid = document.getElementById('fBlockGrid');
+      mainGrid.innerHTML = '';
+      fGrid.innerHTML = '';
+
+      // Lookup maps
+      const mainMap = {};
+      const fMap = {};
+      ELEMENTS.forEach(el => {
+        if (el.r && el.c) mainMap[`${el.r}-${el.c}`] = el;
+        if (el.fRow && el.fCol) fMap[`${el.fRow}-${el.fCol}`] = el;
+      });
+
+      const activeEl = ELEMENTS.find(item => item.z === selectedZ) || ELEMENTS[17];
+
+      // Render 7 rows x 18 cols for Main Table
+      for (let r = 1; r <= 7; r++) {
+        for (let c = 1; c <= 18; c++) {
+          // Handle the Middle Gap (Rows 1 to 3, Columns 3 to 12) cleanly without extra empty divs
+          if (r >= 1 && r <= 3 && c >= 3 && c <= 12) {
+            if (r === 1 && c === 3) {
+              const centerGapBox = document.createElement('div');
+              centerGapBox.style.gridColumn = '3 / 13';
+              centerGapBox.style.gridRow = '1 / 4';
+              centerGapBox.className = 'p-1 flex items-stretch justify-center overflow-hidden';
+
+              if (showCenterArchitectureCard) {
+                const catName = CATEGORY_LABELS[activeEl.cat] || '原子级基础模型';
+                centerGapBox.innerHTML = `
+                  <div class="w-full h-full rounded-xl bg-gradient-to-r from-slate-50/95 via-blue-50/65 to-indigo-50/75 border border-blue-200/80 shadow-xs px-3.5 py-2 flex items-center justify-between gap-3 overflow-hidden">
+                    <!-- Left: Selected Element Big Preview Tile -->
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-12 h-12 rounded-xl cat-${activeEl.cat} flex flex-col items-center justify-center shrink-0 shadow-xs border border-black/10">
+                        <span class="text-[9px] font-bold leading-none opacity-75">${activeEl.z}</span>
+                        <span class="text-[17px] font-extrabold leading-tight tracking-tight">${activeEl.sym}</span>
+                        <span class="text-[9px] font-semibold leading-none">${activeEl.zh}</span>
+                      </div>
+
+                      <!-- Middle: Clear Non-Overlapping Hierarchy -->
+                      <div class="min-w-0 flex flex-col justify-center">
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                          <span class="text-[9.5px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100/80 px-1.5 py-0.2 rounded">
+                            Gemini Periodic Table Architecture
+                          </span>
+                          <span class="text-[10px] font-medium text-slate-500 truncate hidden md:inline">
+                            · ${catName}
+                          </span>
+                        </div>
+                        <div class="text-[13px] font-bold text-slate-900 truncate leading-snug">
+                          ${activeEl.en}-v2 (${activeEl.sym}-${activeEl.z}) · ${activeEl.zh}原子基座模型
+                        </div>
+                        <div class="text-[11px] text-slate-600 truncate mt-0.5">
+                          ${getElementSpec(activeEl)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Right: Sleek Metric Pill Tags -->
+                    <div class="hidden sm:flex flex-col items-end justify-center gap-1 shrink-0 pl-2 border-l border-blue-200/60">
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-2xs whitespace-nowrap">
+                        当前选中: ${activeEl.z} ${activeEl.sym} (${activeEl.zh})
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <span class="text-[9.5px] font-medium px-1.5 py-0.5 rounded bg-white/90 text-slate-700 border border-slate-200/80 whitespace-nowrap">
+                          2M Context
+                        </span>
+                        <span class="text-[9.5px] font-medium px-1.5 py-0.5 rounded bg-white/90 text-emerald-700 border border-emerald-200/80 whitespace-nowrap">
+                          零幻觉稳态
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }
+              mainGrid.appendChild(centerGapBox);
+            }
+            // Skip all other cells inside rows 1..3 and cols 3..12 so the grid never misaligns!
+            continue;
+          }
+
+          // Placeholder cells for Lanthanides (6,3) and Actinides (7,3)
+          if (r === 6 && c === 3) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'el-cell cat-lanthanide opacity-90 cursor-pointer flex flex-col items-center justify-center';
+            placeholder.innerHTML = `
+              <span class="text-[8.5px] font-bold leading-none">57-71</span>
+              <span class="text-[11px] font-bold leading-tight">La-Lu</span>
+              <span class="text-[8.5px] leading-none">镧系</span>
+            `;
+            placeholder.onclick = () => filterCategory('lanthanide');
+            mainGrid.appendChild(placeholder);
+            continue;
+          }
+          if (r === 7 && c === 3) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'el-cell cat-actinide opacity-90 cursor-pointer flex flex-col items-center justify-center';
+            placeholder.innerHTML = `
+              <span class="text-[8.5px] font-bold leading-none">89-103</span>
+              <span class="text-[11px] font-bold leading-tight">Ac-Lr</span>
+              <span class="text-[8.5px] leading-none">锕系</span>
+            `;
+            placeholder.onclick = () => filterCategory('actinide');
+            mainGrid.appendChild(placeholder);
+            continue;
+          }
+
+          const el = mainMap[`${r}-${c}`];
+          if (!el) {
+            mainGrid.appendChild(document.createElement('div'));
+            continue;
+          }
+
+          mainGrid.appendChild(createElementCell(el));
+        }
+      }
+
+      // Render 2 rows x 18 cols for Lanthanides & Actinides
+      for (let fRow = 1; fRow <= 2; fRow++) {
+        for (let fCol = 1; fCol <= 18; fCol++) {
+          if (fCol === 1) {
+            const label = document.createElement('div');
+            label.style.gridColumn = '1 / span 2';
+            label.className = 'flex items-center justify-end pr-2 text-[10px] font-semibold text-gray-500';
+            label.textContent = fRow === 1 ? '57-71 镧系模型' : '89-103 锕系模型';
+            fGrid.appendChild(label);
+            continue;
+          }
+          if (fCol === 2) continue;
+
+          const el = fMap[`${fRow}-${fCol}`];
+          if (!el) {
+            fGrid.appendChild(document.createElement('div'));
+            continue;
+          }
+          fGrid.appendChild(createElementCell(el));
+        }
+      }
+    }
+
+    function createElementCell(el) {
+      const cell = document.createElement('div');
+      const isSelected = el.z === selectedZ;
+      const isRadioactive = isRadioactiveElement(el);
+      cell.className = `el-cell cat-${el.cat} ${isSelected ? 'selected-element' : ''} ${isRadioactive ? 'radioactive-element' : ''}`;
+      if (isRadioactive) {
+        cell.title = `${el.zh} (${el.sym}) · 放射性元素：${RADIOACTIVE_LABEL}`;
+      }
+      cell.dataset.z = el.z;
+      cell.dataset.cat = el.cat;
+      cell.dataset.search = `${el.z} ${el.sym.toLowerCase()} ${el.zh} ${el.en.toLowerCase()}`;
+
+      cell.innerHTML = `
+        <div class="w-full flex items-center justify-between text-[8.5px] font-semibold leading-none opacity-80">
+          <span>${el.z}</span>
+          <span class="flex items-center gap-0.5">
+            ${isRadioactive ? `<span class="radioactive-indicator" aria-label="放射性元素：${RADIOACTIVE_LABEL}">☢</span>` : ''}
+            ${isSelected ? '<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>' : ''}
+          </span>
+        </div>
+        <div class="text-[13px] font-bold leading-none tracking-tight my-0.5">${el.sym}</div>
+        <div class="text-[8.5px] font-medium leading-none truncate max-w-full opacity-90">${el.zh}</div>
+      `;
+
+      // Floating callout badge specifically on the selected element (like Argon-v2 in the screenshot)
+      if (isSelected) {
+        const badge = document.createElement('div');
+        badge.className = 'pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-gray-900 text-white text-[9.5px] font-semibold px-2 py-0.5 rounded shadow-md z-50 flex items-center gap-1';
+        badge.innerHTML = `<span>${el.en}-v2 (当前选择)</span>`;
+        cell.appendChild(badge);
+      }
+
+      cell.onclick = () => selectElementModel(el.z);
+      return cell;
+    }
+
+    function selectElementModel(z) {
+      selectedZ = z;
+      const el = ELEMENTS.find(item => item.z === z);
+      if (!el) return;
+
+      // Update Prompt Bar Trigger Button Text
+      document.getElementById('triggerModelName').textContent = `${el.en}`;
+
+      // Update Bottom Telemetry Bar
+      document.getElementById('footerModelTitle').textContent = `${el.z} ${el.sym} · ${el.zh} (${el.en}-v2)`;
+      document.getElementById('footerModelSpecs').textContent = `· ${getElementSpec(el)}`;
+
+      // Re-render to update active outline, center card, and floating badge
+      renderPeriodicTable();
+      applyCurrentFilterAndSearch();
+    }
+
+    function filterCategory(cat) {
+      currentFilter = cat;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.classList.add('ring-2', 'ring-blue-600', 'ring-offset-1');
+        } else {
+          btn.classList.remove('ring-2', 'ring-blue-600', 'ring-offset-1');
+        }
+      });
+      applyCurrentFilterAndSearch();
+    }
+
+    function searchElements(query) {
+      applyCurrentFilterAndSearch(query);
+    }
+
+    function applyCurrentFilterAndSearch(queryOverride) {
+      const q = (queryOverride !== undefined ? queryOverride : document.getElementById('elementSearch').value).trim().toLowerCase();
+      document.querySelectorAll('.el-cell[data-z]').forEach(cell => {
+        const matchCat = currentFilter === 'all' || cell.dataset.cat === currentFilter;
+        const matchSearch = !q || cell.dataset.search.includes(q);
+        if (matchCat && matchSearch) {
+          cell.classList.remove('dimmed');
+        } else {
+          cell.classList.add('dimmed');
+        }
+      });
+    }
+
+    function togglePeriodicModal() {
+      const modal = document.getElementById('periodicModal');
+      const suggestions = document.getElementById('underPromptSuggestions');
+      const chevron = document.getElementById('triggerChevron');
+
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        suggestions.classList.add('hidden');
+        suggestions.classList.remove('flex');
+        chevron.classList.add('rotate-180');
+      } else {
+        modal.classList.add('hidden');
+        suggestions.classList.remove('hidden');
+        suggestions.classList.add('flex');
+        chevron.classList.remove('rotate-180');
+      }
+    }
+
+    window.onload = function () {
+      renderPeriodicTable();
+    };
+  </script>
+</body>
+</html>
